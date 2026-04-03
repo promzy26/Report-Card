@@ -67,133 +67,121 @@
 
 <script>
     // Paste your Google Web App URL here
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwPpYH6_BGZhIa0O3Cu8keJxArC0jYxwdgQ-0shIzBHjfznjIxP6b6YuhKoSzewwmtC1g/exec"; 
+   <script>
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzNdP-gTAtdXvcUgyUwqEJ_XmkQe3a-Sg7-R-4kqILEabOQyDPQVSaQXsYsqIK3PLwMrQ/exec"; 
     let configData = {};
 
-    // 1. Fetch Config on Load
     async function init() {
-        const res = await fetch(`${WEB_APP_URL}?action=getConfig`);
-        const config = await res.json();
-        configData = config;
-        
-        document.getElementById('schoolName').innerText = config.School_Name;
-        document.getElementById('academicYear').innerText = `Session: ${config.Academic_Year}`;
-        
-        setupSubjects(config.Subjects, config.Competencies);
+        try {
+            const res = await fetch(`${WEB_APP_URL}?action=getConfig`);
+            const config = await res.json();
+            configData = config;
+            
+            document.getElementById('schoolName').innerText = config.School_Name || "School Name";
+            document.getElementById('academicYear').innerText = `Session: ${config.Academic_Year || "--"}`;
+            
+            // Subjects load karna
+            if(config.Subjects) {
+                setupSubjects(config.Subjects, config.Competencies);
+            }
+        } catch(e) { console.error("Loading Error:", e); }
     }
 
-    // 2. Setup Subject Inputs Dynamically
-function setupSubjects(subs, comps) {
-    const container = document.getElementById('subjectsContainer');
-    const subjects = subs.split(',');
-    const competencies = comps ? comps.split(',') : [];
+    function setupSubjects(subs, comps) {
+        const container = document.getElementById('subjectsContainer');
+        container.innerHTML = ""; // Reset container
+        const subjects = subs.split(',');
+        const competencies = comps ? comps.split(',') : [];
 
-    subjects.forEach(sub => {
-        let compHTML = '';
-        competencies.forEach(c => {
-            compHTML += `
-                <div class="col-6 mb-2">
-                    <label class="small text-muted">${c.trim()}</label>
-                    <div class="input-group input-group-sm">
-                        <input type="number" class="form-control comp-input" data-sub="${sub.trim()}" data-compname="${c.trim()}" placeholder="Obt" oninput="calculateResults()">
-                        <span class="input-group-text">/</span>
-                        <input type="number" class="form-control comp-max-input" value="10" style="max-width:55px;" oninput="calculateResults()">
+        subjects.forEach(sub => {
+            let compHTML = '';
+            competencies.forEach(c => {
+                compHTML += `
+                    <div class="col-6 mb-2">
+                        <label class="small text-muted">${c.trim()}</label>
+                        <div class="input-group input-group-sm">
+                            <input type="number" class="form-control comp-input" data-sub="${sub.trim()}" placeholder="Obt" oninput="calculateResults()">
+                            <span class="input-group-text">/</span>
+                            <input type="number" class="form-control comp-max-input" value="10" style="max-width:50px;" oninput="calculateResults()">
+                        </div>
+                    </div>`;
+            });
+
+            container.innerHTML += `
+                <div class="col-md-6 mb-4">
+                    <div class="card p-3 subject-card">
+                        <h5 class="border-bottom pb-2">${sub.trim()}</h5>
+                        <div class="mb-3 p-2 bg-light rounded" style="border: 1px dashed #ccc;">
+                            <label class="small fw-bold">Theory Full Marks:</label>
+                            <input type="number" class="form-control form-control-sm theory-max-input" value="80" oninput="calculateResults()">
+                        </div>
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <label class="fw-bold text-primary">Theory Obtained</label>
+                                <input type="number" class="form-control theory-input" data-sub="${sub.trim()}" oninput="calculateResults()">
+                            </div>
+                            ${compHTML}
+                        </div>
                     </div>
                 </div>`;
         });
-
-        container.innerHTML += `
-            <div class="col-md-6">
-                <div class="card p-3 subject-card">
-                    <h5 class="border-bottom pb-2">${sub.trim()}</h5>
-                    <div class="mb-3 p-2 bg-light rounded">
-                        <label class="small fw-bold">Theory Full Marks:</label>
-                        <input type="number" class="form-control form-control-sm theory-max-input" value="80" oninput="calculateResults()">
-                    </div>
-                    <div class="row">
-                        <div class="col-12 mb-3">
-                            <label class="fw-bold text-primary">Theory Obtained</label>
-                            <input type="number" class="form-control theory-input" oninput="calculateResults()">
-                        </div>
-                        ${compHTML}
-                    </div>
-                </div>
-            </div>`;
-    });
-}
-        
-        document.querySelectorAll('input').forEach(input => {
-            input.addEventListener('input', calculateResults);
-        });
     }
 
-    // 3. Search Student (Auto-fill)
     async function searchStudent() {
         const id = document.getElementById('admNo').value;
+        if(!id) return;
         const res = await fetch(`${WEB_APP_URL}?action=search&id=${id}`);
         const data = await res.json();
         if(data.found) {
             document.getElementById('stuName').value = data.name;
             document.getElementById('rollNo').value = data.roll;
+        } else {
+            alert("Student not found!");
         }
     }
 
-    // 4. Calculate Logic
-function calculateResults() {
-    let grandTotalObtained = 0;
-    let grandTotalMax = 0;
+    function calculateResults() {
+        let grandTotalObtained = 0;
+        let grandTotalMax = 0;
 
-    document.querySelectorAll('.subject-card').forEach(card => {
-        // Theory calculation
-        let tObt = Number(card.querySelector('.theory-input').value) || 0;
-        let tMax = Number(card.querySelector('.theory-max-input').value) || 0;
-        
-        // Competencies calculation
-        let cObt = 0;
-        let cMax = 0;
-        let cInputs = card.querySelectorAll('.comp-input');
-        let cMaxInputs = card.querySelectorAll('.comp-max-input');
+        document.querySelectorAll('.subject-card').forEach(card => {
+            // Theory
+            let tObt = Number(card.querySelector('.theory-input').value) || 0;
+            let tMax = Number(card.querySelector('.theory-max-input').value) || 0;
+            
+            // Competencies
+            let cObt = 0;
+            let cMax = 0;
+            let cInputs = card.querySelectorAll('.comp-input');
+            let cMaxInputs = card.querySelectorAll('.comp-max-input');
 
-        cInputs.forEach((input, index) => {
-            cObt += Number(input.value) || 0;
-            cMax += Number(cMaxInputs[index].value) || 0;
+            cInputs.forEach((input, index) => {
+                cObt += Number(input.value) || 0;
+                cMax += Number(cMaxInputs[index].value) || 0;
+            });
+
+            grandTotalObtained += (tObt + cObt);
+            grandTotalMax += (tMax + cMax);
         });
 
-        grandTotalObtained += (tObt + cObt);
-        grandTotalMax += (tMax + cMax);
-    });
+        let percent = (grandTotalMax > 0) ? (grandTotalObtained / grandTotalMax) * 100 : 0;
+        
+        document.getElementById('displayTotal').innerText = grandTotalObtained + " / " + grandTotalMax;
+        document.getElementById('displayPercent').innerText = percent.toFixed(2) + "%";
+        
+        let grade = (percent >= 33) ? "Pass" : "Fail";
+        if(percent >= 91) grade = "A1";
+        else if(percent >= 81) grade = "A2";
+        else if(percent >= 71) grade = "B1";
+        else if(percent >= 33) grade = "C";
+        
+        document.getElementById('displayGrade').innerText = grade;
+    }
 
-    let percent = (grandTotalMax > 0) ? (grandTotalObtained / grandTotalMax) * 100 : 0;
-    
-    // Display updates
-    document.getElementById('displayTotal').innerText = grandTotalObtained + " / " + grandTotalMax;
-    document.getElementById('displayPercent').innerText = percent.toFixed(2) + "%";
-    
-    // Grade Logic
-    let grade = "E";
-    if(percent >= 91) grade = "A1";
-    else if(percent >= 81) grade = "A2";
-    else if(percent >= 71) grade = "B1";
-    else if(percent >= 33) grade = "C";
-    document.getElementById('displayGrade').innerText = grade;
-}
-
-    // --- YEH NEW SAVE FUNCTION HAI (Design me koi change nahi) ---
     async function submitData() {
         const btn = document.getElementById('saveBtn');
         btn.disabled = true;
         btn.innerText = "Saving...";
-
-        let subjectDetails = [];
-        document.querySelectorAll('.subject-card').forEach(card => {
-            let subName = card.querySelector('h5').innerText;
-            let theory = card.querySelector('.theory-input').value;
-            let comps = {};
-            card.querySelectorAll('.comp-input').forEach(ci => {
-                comps[ci.getAttribute('data-compname')] = ci.value;
-            });
-            subjectDetails.push({ subject: subName, theory: theory, competencies: comps });
-        });
 
         const payload = {
             admNo: document.getElementById('admNo').value,
@@ -201,24 +189,21 @@ function calculateResults() {
             roll: document.getElementById('rollNo').value,
             classSec: document.getElementById('classSec').value,
             totalMarks: document.getElementById('displayTotal').innerText,
-            percentage: document.getElementById('displayPercent').innerText.replace('%',''),
-            grade: document.getElementById('displayGrade').innerText,
-            subjectData: subjectDetails
+            percentage: document.getElementById('displayPercent').innerText,
+            grade: document.getElementById('displayGrade').innerText
         };
 
         try {
-            // Google Script ko data bhej rahe hain
             await fetch(WEB_APP_URL, {
                 method: 'POST',
-                mode: 'no-cors', 
+                mode: 'no-cors',
                 body: JSON.stringify(payload)
             });
-            alert("Success! Record saved for " + payload.name);
-            location.reload(); // Next student ke liye page clear
-        } catch (e) {
-            console.log(e);
-            alert("Saved! (Please check sheet)");
+            alert("Record Saved!");
             location.reload();
+        } catch(e) {
+            alert("Error saving data.");
+            btn.disabled = false;
         }
     }
 
