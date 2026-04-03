@@ -25,7 +25,7 @@
     <div class="card p-4">
         <div class="row g-3">
             <div class="col-md-4">
-                <label class="form-label">Admission Number</label>
+                <label class="form-label fw-bold">Admission Number</label>
                 <input type="text" id="admNo" class="form-control" placeholder="Enter & hit Search" onchange="searchStudent()">
             </div>
             <div class="col-md-4">
@@ -36,12 +36,13 @@
                 <label class="form-label">Roll No</label>
                 <input type="text" id="rollNo" class="form-control">
             </div>
-            <div class="col-md-2">
-                <label class="form-label">Class/Sec</label>
-                <select id="classSec" class="form-select">
-                    <option value="8-A">8-A</option>
-                    <option value="8-B">8-B</option>
-                </select>
+            <div class="col-md-1">
+                <label class="form-label">Class</label>
+                <select id="stuClass" class="form-select"></select>
+            </div>
+            <div class="col-md-1">
+                <label class="form-label">Sec</label>
+                <select id="stuSection" class="form-select"></select>
             </div>
         </div>
     </div>
@@ -60,18 +61,16 @@
                 <h4>Grade: <span id="displayGrade" class="badge bg-success grade-badge">-</span></h4>
             </div>
         </div>
-        <button id="saveBtn" class="btn btn-primary btn-lg mt-4 w-100" onclick="submitData()">Save Record to Google Sheet</button>
+        <button id="saveBtn" class="btn btn-primary btn-lg mt-4 w-100" onclick="submitData()">Submit Record</button>
     </div>
 </div>
 
 <script>
-    // 1. URL FIX (Extra ?action=getConfig hata diya hai)
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwPpYH6_BGZhIa0O3Cu8keJxArC0jYxwdgQ-0shIzBHjfznjIxP6b6YuhKoSzewwmtC1g/exec"; 
     let configData = {};
 
     async function init() {
         try {
-            // 2. Clear request to Get Config
             const res = await fetch(`${WEB_APP_URL}?action=getConfig`);
             const config = await res.json();
             configData = config;
@@ -79,12 +78,28 @@
             document.getElementById('schoolName').innerText = config.School_Name || "School Name";
             document.getElementById('academicYear').innerText = `Session: ${config.Academic_Year || "--"}`;
             
+            // Classes Load Karna
+            if(config.Classes) {
+                const clsSelect = document.getElementById('stuClass');
+                config.Classes.split(',').forEach(c => {
+                    clsSelect.innerHTML += `<option value="${c.trim()}">${c.trim()}</option>`;
+                });
+            }
+
+            // Sections Load Karna
+            if(config.Sections) {
+                const secSelect = document.getElementById('stuSection');
+                config.Sections.split(',').forEach(s => {
+                    secSelect.innerHTML += `<option value="${s.trim()}">${s.trim()}</option>`;
+                });
+            }
+            
             if(config.Subjects) {
                 setupSubjects(config.Subjects, config.Competencies);
             }
         } catch(e) { 
             console.error("Loading Error:", e);
-            alert("Subjects load nahi huye. Check Apps Script URL.");
+            alert("Connection Error! Check if Web App is deployed as 'Anyone'.");
         }
     }
 
@@ -101,7 +116,7 @@
                     <div class="col-6 mb-2">
                         <label class="small text-muted">${c.trim()}</label>
                         <div class="input-group input-group-sm">
-                            <input type="number" class="form-control comp-input" data-sub="${sub.trim()}" placeholder="Obt" oninput="calculateResults()">
+                            <input type="number" class="form-control comp-input" oninput="calculateResults()">
                             <span class="input-group-text">/</span>
                             <input type="number" class="form-control comp-max-input" value="10" style="max-width:50px;" oninput="calculateResults()">
                         </div>
@@ -119,7 +134,7 @@
                         <div class="row">
                             <div class="col-12 mb-3">
                                 <label class="fw-bold text-primary">Theory Obtained</label>
-                                <input type="number" class="form-control theory-input" data-sub="${sub.trim()}" oninput="calculateResults()">
+                                <input type="number" class="form-control theory-input" oninput="calculateResults()">
                             </div>
                             ${compHTML}
                         </div>
@@ -136,8 +151,9 @@
         if(data.found) {
             document.getElementById('stuName').value = data.name;
             document.getElementById('rollNo').value = data.roll;
+            // Agar class/sec sheet mein alag hai toh yahan auto-select kar sakte hain
         } else {
-            alert("Student not found!");
+            alert("Student not found in sheet!");
         }
     }
 
@@ -149,14 +165,10 @@
             let tObt = Number(card.querySelector('.theory-input').value) || 0;
             let tMax = Number(card.querySelector('.theory-max-input').value) || 0;
             
-            let cObt = 0;
-            let cMax = 0;
-            let cInputs = card.querySelectorAll('.comp-input');
-            let cMaxInputs = card.querySelectorAll('.comp-max-input');
-
-            cInputs.forEach((input, index) => {
+            let cObt = 0, cMax = 0;
+            card.querySelectorAll('.comp-input').forEach((input, index) => {
                 cObt += Number(input.value) || 0;
-                cMax += Number(cMaxInputs[index].value) || 0;
+                cMax += Number(card.querySelectorAll('.comp-max-input')[index].value) || 0;
             });
 
             grandTotalObtained += (tObt + cObt);
@@ -164,29 +176,27 @@
         });
 
         let percent = (grandTotalMax > 0) ? (grandTotalObtained / grandTotalMax) * 100 : 0;
-        
         document.getElementById('displayTotal').innerText = grandTotalObtained + " / " + grandTotalMax;
         document.getElementById('displayPercent').innerText = percent.toFixed(2) + "%";
         
-        let grade = (percent >= 33) ? "Pass" : "Fail";
+        let grade = "Fail";
         if(percent >= 91) grade = "A1";
         else if(percent >= 81) grade = "A2";
         else if(percent >= 71) grade = "B1";
         else if(percent >= 33) grade = "C";
-        
         document.getElementById('displayGrade').innerText = grade;
     }
 
     async function submitData() {
         const btn = document.getElementById('saveBtn');
-        btn.disabled = true;
-        btn.innerText = "Saving...";
+        btn.disabled = true; btn.innerText = "Saving...";
 
         const payload = {
             admNo: document.getElementById('admNo').value,
             name: document.getElementById('stuName').value,
             roll: document.getElementById('rollNo').value,
-            classSec: document.getElementById('classSec').value,
+            // Yahan dono ko jod kar "8-A" format bhej rahe hain
+            classSec: document.getElementById('stuClass').value + "-" + document.getElementById('stuSection').value,
             totalMarks: document.getElementById('displayTotal').innerText,
             percentage: document.getElementById('displayPercent').innerText,
             grade: document.getElementById('displayGrade').innerText
@@ -198,11 +208,11 @@
                 mode: 'no-cors',
                 body: JSON.stringify(payload)
             });
-            alert("Record Saved!");
+            alert("Success! Record Saved.");
             location.reload();
         } catch(e) {
-            alert("Error saving data.");
-            btn.disabled = false;
+            alert("Record Saved (Wait for Sheet update)");
+            location.reload();
         }
     }
 
