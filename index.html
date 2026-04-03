@@ -46,18 +46,17 @@
         </div>
     </div>
 
-    <div id="subjectsContainer" class="row">
-        </div>
+    <div id="subjectsContainer" class="row"></div>
 
     <div class="card p-4 bg-light">
-        <div class="row align-items-center">
-            <div class="col-md-4 text-center">
+        <div class="row align-items-center text-center">
+            <div class="col-md-4">
                 <h4>Total: <span id="displayTotal">0</span></h4>
             </div>
-            <div class="col-md-4 text-center">
+            <div class="col-md-4">
                 <h4>Percentage: <span id="displayPercent">0%</span></h4>
             </div>
-            <div class="col-md-4 text-center">
+            <div class="col-md-4">
                 <h4>Grade: <span id="displayGrade" class="badge bg-success grade-badge">-</span></h4>
             </div>
         </div>
@@ -66,13 +65,13 @@
 </div>
 
 <script>
-    // Paste your Google Web App URL here
-   <script>
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwPpYH6_BGZhIa0O3Cu8keJxArC0jYxwdgQ-0shIzBHjfznjIxP6b6YuhKoSzewwmtC1g/exec?action=getConfig"; 
+    // 1. URL FIX (Extra ?action=getConfig hata diya hai)
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwPpYH6_BGZhIa0O3Cu8keJxArC0jYxwdgQ-0shIzBHjfznjIxP6b6YuhKoSzewwmtC1g/exec"; 
     let configData = {};
 
     async function init() {
         try {
+            // 2. Clear request to Get Config
             const res = await fetch(`${WEB_APP_URL}?action=getConfig`);
             const config = await res.json();
             configData = config;
@@ -80,16 +79,18 @@
             document.getElementById('schoolName').innerText = config.School_Name || "School Name";
             document.getElementById('academicYear').innerText = `Session: ${config.Academic_Year || "--"}`;
             
-            // Subjects load karna
             if(config.Subjects) {
                 setupSubjects(config.Subjects, config.Competencies);
             }
-        } catch(e) { console.error("Loading Error:", e); }
+        } catch(e) { 
+            console.error("Loading Error:", e);
+            alert("Subjects load nahi huye. Check Apps Script URL.");
+        }
     }
 
     function setupSubjects(subs, comps) {
         const container = document.getElementById('subjectsContainer');
-        container.innerHTML = ""; // Reset container
+        container.innerHTML = ""; 
         const subjects = subs.split(',');
         const competencies = comps ? comps.split(',') : [];
 
@@ -145,11 +146,9 @@
         let grandTotalMax = 0;
 
         document.querySelectorAll('.subject-card').forEach(card => {
-            // Theory
             let tObt = Number(card.querySelector('.theory-input').value) || 0;
             let tMax = Number(card.querySelector('.theory-max-input').value) || 0;
             
-            // Competencies
             let cObt = 0;
             let cMax = 0;
             let cInputs = card.querySelectorAll('.comp-input');
