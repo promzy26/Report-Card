@@ -83,35 +83,44 @@
     }
 
     // 2. Setup Subject Inputs Dynamically
-    function setupSubjects(subs, comps) {
-        const container = document.getElementById('subjectsContainer');
-        const subjects = subs.split(',');
-        const competencies = comps.split(',');
+function setupSubjects(subs, comps) {
+    const container = document.getElementById('subjectsContainer');
+    const subjects = subs.split(',');
+    const competencies = comps ? comps.split(',') : [];
 
-        subjects.forEach(sub => {
-            let compHTML = '';
-            competencies.forEach(c => {
-                compHTML += `
-                    <div class="col-6 mb-2">
-                        <label class="small text-muted">${c.trim()}</label>
-                        <input type="number" class="form-control comp-input" data-sub="${sub.trim()}" data-compname="${c.trim()}" placeholder="Marks">
-                    </div>`;
-            });
-
-            container.innerHTML += `
-                <div class="col-md-6">
-                    <div class="card p-3 subject-card">
-                        <h5>${sub.trim()}</h5>
-                        <div class="row">
-                            <div class="col-12 mb-2">
-                                <label class="fw-bold text-primary">Theory Marks</label>
-                                <input type="number" class="form-control theory-input" data-sub="${sub.trim()}" oninput="calculateResults()">
-                            </div>
-                            ${compHTML}
-                        </div>
+    subjects.forEach(sub => {
+        let compHTML = '';
+        competencies.forEach(c => {
+            compHTML += `
+                <div class="col-6 mb-2">
+                    <label class="small text-muted">${c.trim()}</label>
+                    <div class="input-group input-group-sm">
+                        <input type="number" class="form-control comp-input" data-sub="${sub.trim()}" data-compname="${c.trim()}" placeholder="Obt" oninput="calculateResults()">
+                        <span class="input-group-text">/</span>
+                        <input type="number" class="form-control comp-max-input" value="10" style="max-width:55px;" oninput="calculateResults()">
                     </div>
                 </div>`;
         });
+
+        container.innerHTML += `
+            <div class="col-md-6">
+                <div class="card p-3 subject-card">
+                    <h5 class="border-bottom pb-2">${sub.trim()}</h5>
+                    <div class="mb-3 p-2 bg-light rounded">
+                        <label class="small fw-bold">Theory Full Marks:</label>
+                        <input type="number" class="form-control form-control-sm theory-max-input" value="80" oninput="calculateResults()">
+                    </div>
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <label class="fw-bold text-primary">Theory Obtained</label>
+                            <input type="number" class="form-control theory-input" oninput="calculateResults()">
+                        </div>
+                        ${compHTML}
+                    </div>
+                </div>
+            </div>`;
+    });
+}
         
         document.querySelectorAll('input').forEach(input => {
             input.addEventListener('input', calculateResults);
@@ -130,26 +139,44 @@
     }
 
     // 4. Calculate Logic
-    function calculateResults() {
-        let totalObtained = 0;
-        let theoryFields = document.querySelectorAll('.theory-input');
+function calculateResults() {
+    let grandTotalObtained = 0;
+    let grandTotalMax = 0;
+
+    document.querySelectorAll('.subject-card').forEach(card => {
+        // Theory calculation
+        let tObt = Number(card.querySelector('.theory-input').value) || 0;
+        let tMax = Number(card.querySelector('.theory-max-input').value) || 0;
         
-        document.querySelectorAll('.theory-input, .comp-input').forEach(input => {
-            totalObtained += Number(input.value) || 0;
+        // Competencies calculation
+        let cObt = 0;
+        let cMax = 0;
+        let cInputs = card.querySelectorAll('.comp-input');
+        let cMaxInputs = card.querySelectorAll('.comp-max-input');
+
+        cInputs.forEach((input, index) => {
+            cObt += Number(input.value) || 0;
+            cMax += Number(cMaxInputs[index].value) || 0;
         });
 
-        let percent = (totalObtained / (theoryFields.length * 100)) * 100;
-        document.getElementById('displayTotal').innerText = totalObtained;
-        document.getElementById('displayPercent').innerText = percent.toFixed(2) + "%";
-        
-        let grade = "E";
-        if(percent >= 90) grade = "A1";
-        else if(percent >= 80) grade = "A2";
-        else if(percent >= 70) grade = "B1";
-        else if(percent >= 33) grade = "C";
-        
-        document.getElementById('displayGrade').innerText = grade;
-    }
+        grandTotalObtained += (tObt + cObt);
+        grandTotalMax += (tMax + cMax);
+    });
+
+    let percent = (grandTotalMax > 0) ? (grandTotalObtained / grandTotalMax) * 100 : 0;
+    
+    // Display updates
+    document.getElementById('displayTotal').innerText = grandTotalObtained + " / " + grandTotalMax;
+    document.getElementById('displayPercent').innerText = percent.toFixed(2) + "%";
+    
+    // Grade Logic
+    let grade = "E";
+    if(percent >= 91) grade = "A1";
+    else if(percent >= 81) grade = "A2";
+    else if(percent >= 71) grade = "B1";
+    else if(percent >= 33) grade = "C";
+    document.getElementById('displayGrade').innerText = grade;
+}
 
     // --- YEH NEW SAVE FUNCTION HAI (Design me koi change nahi) ---
     async function submitData() {
