@@ -46,8 +46,7 @@
         </div>
     </div>
 
-    <div id="subjectsContainer" class="row">
-        </div>
+    <div id="subjectsContainer" class="row"></div>
 
     <div class="card p-4 bg-light">
         <div class="row align-items-center">
@@ -61,28 +60,23 @@
                 <h4>Grade: <span id="displayGrade" class="badge bg-success grade-badge">-</span></h4>
             </div>
         </div>
-        <button class="btn btn-primary btn-lg mt-4 w-100" onclick="submitData()">Save Record to Google Sheet</button>
+        <button id="saveBtn" class="btn btn-primary btn-lg mt-4 w-100" onclick="submitData()">Save Record to Google Sheet</button>
     </div>
 </div>
 
 <script>
-    // Paste your Google Web App URL here
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzkdDlNyo_7Bq9XdLVC3TXtu_cFzR4GAhFOEBEN7vgursFccT81wfox64YGfw_-GshjMg/exec"; 
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzNdP-gTAtdXvcUgyUwqEJ_XmkQe3a-Sg7-R-4kqILEabOQyDPQVSaQXsYsqIK3PLwMrQ/exec"; 
     let configData = {};
 
-    // 1. Fetch Config on Load
     async function init() {
         const res = await fetch(`${WEB_APP_URL}?action=getConfig`);
         const config = await res.json();
         configData = config;
-        
         document.getElementById('schoolName').innerText = config.School_Name;
         document.getElementById('academicYear').innerText = `Session: ${config.Academic_Year}`;
-        
         setupSubjects(config.Subjects, config.Competencies);
     }
 
-    // 2. Setup Subject Inputs Dynamically
     function setupSubjects(subs, comps) {
         const container = document.getElementById('subjectsContainer');
         const subjects = subs.split(',');
@@ -94,7 +88,7 @@
                 compHTML += `
                     <div class="col-6 mb-2">
                         <label class="small text-muted">${c.trim()}</label>
-                        <input type="number" class="form-control comp-input" data-sub="${sub}" placeholder="Marks">
+                        <input type="number" class="form-control comp-input" data-sub="${sub.trim()}" data-comp="${c.trim()}" placeholder="Marks">
                     </div>`;
             });
 
@@ -105,7 +99,7 @@
                         <div class="row">
                             <div class="col-12 mb-2">
                                 <label class="fw-bold text-primary">Theory Marks</label>
-                                <input type="number" class="form-control theory-input" data-sub="${sub}" oninput="calculateResults()">
+                                <input type="number" class="form-control theory-input" data-sub="${sub.trim()}" oninput="calculateResults()">
                             </div>
                             ${compHTML}
                         </div>
@@ -113,13 +107,11 @@
                 </div>`;
         });
         
-        // Add listeners to all inputs for calculation
         document.querySelectorAll('input').forEach(input => {
             input.addEventListener('input', calculateResults);
         });
     }
 
-    // 3. Search Student (Auto-fill)
     async function searchStudent() {
         const id = document.getElementById('admNo').value;
         const res = await fetch(`${WEB_APP_URL}?action=search&id=${id}`);
@@ -130,28 +122,67 @@
         }
     }
 
-    // 4. Calculate Logic
     function calculateResults() {
         let totalObtained = 0;
-        let totalPossible = 0;
+        let subCount = document.querySelectorAll('.subject-card').length;
         
         document.querySelectorAll('.theory-input, .comp-input').forEach(input => {
             totalObtained += Number(input.value) || 0;
-            totalPossible += 100; // Adjust max marks as needed
         });
 
-        let percent = (totalObtained / (document.querySelectorAll('.theory-input').length * 100)) * 100;
+        // Har sub 100 marks ka maana hai (Theory + Comps)
+        let percent = (totalObtained / (subCount * 100)) * 100;
         document.getElementById('displayTotal').innerText = totalObtained;
         document.getElementById('displayPercent').innerText = percent.toFixed(2) + "%";
         
-        // Grade Logic
         let grade = "E";
         if(percent >= 90) grade = "A1";
         else if(percent >= 80) grade = "A2";
         else if(percent >= 70) grade = "B1";
         else if(percent >= 33) grade = "C";
-        
         document.getElementById('displayGrade').innerText = grade;
+    }
+
+    async function submitData() {
+        const btn = document.getElementById('saveBtn');
+        btn.disabled = true;
+        btn.innerText = "Saving...";
+
+        let subjectData = [];
+        document.querySelectorAll('.subject-card').forEach(card => {
+            let subName = card.querySelector('h5').innerText;
+            let theory = card.querySelector('.theory-input').value;
+            let comps = {};
+            card.querySelectorAll('.comp-input').forEach(ci => {
+                comps[ci.dataset.comp] = ci.value;
+            });
+            subjectData.push({ subject: subName, theory: theory, competencies: comps });
+        });
+
+        const payload = {
+            admNo: document.getElementById('admNo').value,
+            name: document.getElementById('stuName').value,
+            roll: document.getElementById('rollNo').value,
+            classSec: document.getElementById('classSec').value,
+            totalMarks: document.getElementById('displayTotal').innerText,
+            percentage: document.getElementById('displayPercent').innerText.replace('%',''),
+            grade: document.getElementById('displayGrade').innerText,
+            subjectData: subjectData
+        };
+
+        try {
+            await fetch(WEB_APP_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                body: JSON.stringify(payload)
+            });
+            alert("Record Saved Successfully!");
+            location.reload(); 
+        } catch (e) {
+            alert("Error saving data. Please try again.");
+            btn.disabled = false;
+            btn.innerText = "Save Record";
+        }
     }
 
     window.onload = init;
