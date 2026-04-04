@@ -7,7 +7,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         :root { --primary-color: #2c3e50; }
-        body { background-color: #f4f7f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #f4f7f6; font-family: 'Segoe UI', sans-serif; }
         .header-section { background: var(--primary-color); color: white; padding: 20px; border-radius: 0 0 20px 20px; margin-bottom: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         .card { border: none; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
         .subject-card { border-left: 5px solid #3498db; }
@@ -51,15 +51,9 @@
 
     <div class="card p-4 bg-light">
         <div class="row align-items-center text-center">
-            <div class="col-md-4">
-                <h4>Total: <span id="displayTotal">0</span></h4>
-            </div>
-            <div class="col-md-4">
-                <h4>Percentage: <span id="displayPercent">0%</span></h4>
-            </div>
-            <div class="col-md-4">
-                <h4>Grade: <span id="displayGrade" class="badge bg-success grade-badge">-</span></h4>
-            </div>
+            <div class="col-md-4"><h4>Total: <span id="displayTotal">0</span></h4></div>
+            <div class="col-md-4"><h4>Percentage: <span id="displayPercent">0%</span></h4></div>
+            <div class="col-md-4"><h4>Grade: <span id="displayGrade" class="badge bg-success grade-badge">-</span></h4></div>
         </div>
         <button id="saveBtn" class="btn btn-primary btn-lg mt-4 w-100" onclick="submitData()">Submit Record</button>
     </div>
@@ -67,40 +61,24 @@
 
 <script>
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwPpYH6_BGZhIa0O3Cu8keJxArC0jYxwdgQ-0shIzBHjfznjIxP6b6YuhKoSzewwmtC1g/exec"; 
-    let configData = {};
 
     async function init() {
         try {
             const res = await fetch(`${WEB_APP_URL}?action=getConfig`);
             const config = await res.json();
-            configData = config;
-            
             document.getElementById('schoolName').innerText = config.School_Name || "School Name";
             document.getElementById('academicYear').innerText = `Session: ${config.Academic_Year || "--"}`;
             
-            // Classes Load Karna
             if(config.Classes) {
                 const clsSelect = document.getElementById('stuClass');
-                config.Classes.split(',').forEach(c => {
-                    clsSelect.innerHTML += `<option value="${c.trim()}">${c.trim()}</option>`;
-                });
+                config.Classes.split(',').forEach(c => clsSelect.innerHTML += `<option value="${c.trim()}">${c.trim()}</option>`);
             }
-
-            // Sections Load Karna
             if(config.Sections) {
                 const secSelect = document.getElementById('stuSection');
-                config.Sections.split(',').forEach(s => {
-                    secSelect.innerHTML += `<option value="${s.trim()}">${s.trim()}</option>`;
-                });
+                config.Sections.split(',').forEach(s => secSelect.innerHTML += `<option value="${s.trim()}">${s.trim()}</option>`);
             }
-            
-            if(config.Subjects) {
-                setupSubjects(config.Subjects, config.Competencies);
-            }
-        } catch(e) { 
-            console.error("Loading Error:", e);
-            alert("Connection Error! Check if Web App is deployed as 'Anyone'.");
-        }
+            if(config.Subjects) setupSubjects(config.Subjects, config.Competencies);
+        } catch(e) { alert("Connection Error! Deploy as 'Anyone'."); }
     }
 
     function setupSubjects(subs, comps) {
@@ -116,7 +94,7 @@
                     <div class="col-6 mb-2">
                         <label class="small text-muted">${c.trim()}</label>
                         <div class="input-group input-group-sm">
-                            <input type="number" class="form-control comp-input" oninput="calculateResults()">
+                            <input type="number" class="form-control comp-input" data-comp="${c.trim()}" oninput="calculateResults()">
                             <span class="input-group-text">/</span>
                             <input type="number" class="form-control comp-max-input" value="10" style="max-width:50px;" oninput="calculateResults()">
                         </div>
@@ -125,9 +103,9 @@
 
             container.innerHTML += `
                 <div class="col-md-6 mb-4">
-                    <div class="card p-3 subject-card">
+                    <div class="card p-3 subject-card" data-subject-name="${sub.trim()}">
                         <h5 class="border-bottom pb-2">${sub.trim()}</h5>
-                        <div class="mb-3 p-2 bg-light rounded" style="border: 1px dashed #ccc;">
+                        <div class="mb-3 p-2 bg-light rounded">
                             <label class="small fw-bold">Theory Full Marks:</label>
                             <input type="number" class="form-control form-control-sm theory-max-input" value="80" oninput="calculateResults()">
                         </div>
@@ -143,117 +121,70 @@
         });
     }
 
- async function searchStudent() {
-    const id = document.getElementById('admNo').value;
-    if(!id) return;
-    
-    try {
-        const res = await fetch(`${WEB_APP_URL}?action=search&id=${id}`);
-        const data = await res.json();
-        
-        // Agar bacha mil gaya toh details bhar do
-        if(data && data.found) {
-            document.getElementById('stuName').value = data.name;
-            document.getElementById('rollNo').value = data.roll;
-        } 
-        // Agar nahi mila toh bas "kuch nahi hoga", function chup-chaap khatam ho jayega
-    } catch(e) {
-        console.log("Search silent error"); // Console mein error rahega par screen pe kuch nahi
+    async function searchStudent() {
+        const id = document.getElementById('admNo').value;
+        if(!id) return;
+        try {
+            const res = await fetch(`${WEB_APP_URL}?action=search&id=${id}`);
+            const data = await res.json();
+            if(data && data.found) {
+                document.getElementById('stuName').value = data.name;
+                document.getElementById('rollNo').value = data.roll;
+            }
+        } catch(e) { console.log("Silent error"); }
     }
-}
 
     function calculateResults() {
-        let grandTotalObtained = 0;
-        let grandTotalMax = 0;
-
+        let grandTotalObtained = 0; let grandTotalMax = 0;
         document.querySelectorAll('.subject-card').forEach(card => {
             let tObt = Number(card.querySelector('.theory-input').value) || 0;
             let tMax = Number(card.querySelector('.theory-max-input').value) || 0;
-            
-            let cObt = 0, cMax = 0;
-            card.querySelectorAll('.comp-input').forEach((input, index) => {
+            let cObt = 0; let cMax = 0;
+            card.querySelectorAll('.comp-input').forEach((input, idx) => {
                 cObt += Number(input.value) || 0;
-                cMax += Number(card.querySelectorAll('.comp-max-input')[index].value) || 0;
+                cMax += Number(card.querySelectorAll('.comp-max-input')[idx].value) || 0;
             });
-
             grandTotalObtained += (tObt + cObt);
             grandTotalMax += (tMax + cMax);
         });
-
         let percent = (grandTotalMax > 0) ? (grandTotalObtained / grandTotalMax) * 100 : 0;
         document.getElementById('displayTotal').innerText = grandTotalObtained + " / " + grandTotalMax;
         document.getElementById('displayPercent').innerText = percent.toFixed(2) + "%";
-        
-        let grade = "Fail";
-        if(percent >= 91) grade = "A1";
-        else if(percent >= 81) grade = "A2";
-        else if(percent >= 71) grade = "B1";
-        else if(percent >= 33) grade = "C";
+        let grade = percent >= 33 ? (percent >= 91 ? "A1" : percent >= 81 ? "A2" : percent >= 71 ? "B1" : "C") : "Fail";
         document.getElementById('displayGrade').innerText = grade;
     }
 
-async function submitData() {
-    const btn = document.getElementById('saveBtn');
-    btn.disabled = true; btn.innerText = "Saving...";
-
-    // 1. Pehle saare subjects ka data collect karo
-    let finalSubjects = [];
-    document.querySelectorAll('.subject-card').forEach(card => {
-        let subName = card.getAttribute('data-subject-name');
-        let theory = card.querySelector('.theory-input').value || ""; // Empty string agar marks nahi hain
-        
-        let comps = {};
-        card.querySelectorAll('.comp-input').forEach(ci => {
-            let compName = ci.getAttribute('data-comp');
-            comps[compName] = ci.value || ""; 
+    async function submitData() {
+        const btn = document.getElementById('saveBtn');
+        btn.disabled = true; btn.innerText = "Saving...";
+        let finalSubjects = [];
+        document.querySelectorAll('.subject-card').forEach(card => {
+            let comps = {};
+            card.querySelectorAll('.comp-input').forEach(ci => { comps[ci.dataset.comp] = ci.value || ""; });
+            finalSubjects.push({
+                subject: card.dataset.subjectName,
+                theory: card.querySelector('.theory-input').value || "",
+                competencies: comps
+            });
         });
 
-        finalSubjects.push({
-            subject: subName,
-            theory: theory,
-            competencies: comps
-        });
-    });
-
-    // 2. PAYLOAD taiyar karo
-    const payload = {
-        admNo: document.getElementById('admNo').value,
-        name: document.getElementById('stuName').value,
-        roll: document.getElementById('rollNo').value,
-        classSec: document.getElementById('stuClass').value + "-" + document.getElementById('stuSection').value,
-        totalMarks: document.getElementById('displayTotal').innerText,
-        percentage: document.getElementById('displayPercent').innerText,
-        grade: document.getElementById('displayGrade').innerText,
-        // YAHAN DHAYAN DO: Array ko String mein badal kar bhej rahe hain
-        subjectData: JSON.stringify(finalSubjects) 
-    };
-
-    try {
-        // 3. Google Script ko bhejo
-        const response = await fetch(WEB_APP_URL, {
-            method: 'POST',
-            body: JSON.stringify(payload) // Pura payload stringify hona chahiye
-        });
-        
-        alert("Record Saved Successfully!");
-        location.reload();
-    } catch(e) {
-        // Google Script 'no-cors' mode mein error throw karta hai par data save ho jata hai
-        alert("Record Sent to Sheet!");
-        location.reload();
-    }
-}
+        const payload = {
+            admNo: document.getElementById('admNo').value,
+            name: document.getElementById('stuName').value,
+            roll: document.getElementById('rollNo').value,
+            classSec: document.getElementById('stuClass').value + "-" + document.getElementById('stuSection').value,
+            totalMarks: document.getElementById('displayTotal').innerText,
+            percentage: document.getElementById('displayPercent').innerText,
+            grade: document.getElementById('displayGrade').innerText,
+            subjectData: JSON.stringify(finalSubjects)
+        };
 
         try {
-            await fetch(WEB_APP_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                body: JSON.stringify(payload)
-            });
-            alert("Success! Record Saved.");
+            await fetch(WEB_APP_URL, { method: 'POST', body: JSON.stringify(payload) });
+            alert("Record Saved Successfully!");
             location.reload();
         } catch(e) {
-            alert("Record Saved (Wait for Sheet update)");
+            alert("Sent to Sheet!");
             location.reload();
         }
     }
