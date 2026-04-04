@@ -143,19 +143,24 @@
         });
     }
 
-    async function searchStudent() {
-        const id = document.getElementById('admNo').value;
-        if(!id) return;
+ async function searchStudent() {
+    const id = document.getElementById('admNo').value;
+    if(!id) return;
+    
+    try {
         const res = await fetch(`${WEB_APP_URL}?action=search&id=${id}`);
         const data = await res.json();
-        if(data.found) {
+        
+        // Agar bacha mil gaya toh details bhar do
+        if(data && data.found) {
             document.getElementById('stuName').value = data.name;
             document.getElementById('rollNo').value = data.roll;
-            // Agar class/sec sheet mein alag hai toh yahan auto-select kar sakte hain
-        } else {
-            alert("Student not found in sheet!");
-        }
+        } 
+        // Agar nahi mila toh bas "kuch nahi hoga", function chup-chaap khatam ho jayega
+    } catch(e) {
+        console.log("Search silent error"); // Console mein error rahega par screen pe kuch nahi
     }
+}
 
     function calculateResults() {
         let grandTotalObtained = 0;
