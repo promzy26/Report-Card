@@ -135,7 +135,7 @@
         document.getElementById('actionBtns').style.display = 'none';
 
         try {
-            const response = await fetch(`${WEB_APP_URL}?action=getReport&id=${id}`);
+            const response = await fetch(`${WEB_APP_URL}?action=getReport&id=${encodeURIComponent(id)}`);
             const data = await response.json();
 
             if(data && data.found) {
@@ -152,8 +152,8 @@
     }
 
     function renderReport(data) {
-        document.getElementById('rSchoolName').innerText = data.schoolName;
-        document.getElementById('rSession').innerText = `SESSION: ${data.session}`;
+        document.getElementById('rSchoolName').innerText = data.schoolName || "School Name";
+        document.getElementById('rSession').innerText = `SESSION: ${data.session || "2024-25"}`;
         document.getElementById('rName').innerText = data.name;
         document.getElementById('rRoll').innerText = data.roll;
         document.getElementById('rAdm').innerText = document.getElementById('admNoSearch').value;
@@ -162,34 +162,39 @@
         document.getElementById('rPercent').innerText = data.percent;
         document.getElementById('rGrade').innerText = data.grade;
 
-        const subjects = data.subjects;
+        let subjects = data.subjects;
+
+        // Safety Fix: Agar subjects String hai toh use Parse karo
+        if (typeof subjects === 'string') {
+            try { subjects = JSON.parse(subjects); } catch(e) { subjects = []; }
+        }
+
         if(!subjects || subjects.length === 0) return;
 
-        // Smart Logic: Sirf wahi Competencies dikhao jo empty nahi hain
         let validComps = new Set();
         subjects.forEach(s => {
-            for(let key in s.competencies) {
-                if(s.competencies[key] !== "" && s.competencies[key] !== undefined) {
-                    validComps.add(key);
+            if(s.competencies) {
+                for(let key in s.competencies) {
+                    if(s.competencies[key] !== "" && s.competencies[key] !== undefined) {
+                        validComps.add(key);
+                    }
                 }
             }
         });
 
         const compList = Array.from(validComps);
 
-        // Header Generate (Horizontal)
         let headHTML = `<tr><th class="sub-name">Subjects</th><th>Theory</th>`;
         compList.forEach(c => headHTML += `<th>${c}</th>`);
         headHTML += `</tr>`;
         document.getElementById('marksHead').innerHTML = headHTML;
 
-        // Body Generate
         let bodyHTML = "";
         subjects.forEach(s => {
             bodyHTML += `<tr><td class="sub-name">${s.subject}</td><td>${s.theory || '0'}</td>`;
             compList.forEach(c => {
-                let val = s.competencies[c];
-                bodyHTML += `<td>${(val !== "" && val !== undefined) ? val : '-'}</td>`;
+                let val = (s.competencies && s.competencies[c] !== "" && s.competencies[c] !== undefined) ? s.competencies[c] : '-';
+                bodyHTML += `<td>${val}</td>`;
             });
             bodyHTML += `</tr>`;
         });
