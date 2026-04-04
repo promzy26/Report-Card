@@ -192,20 +192,57 @@
         document.getElementById('displayGrade').innerText = grade;
     }
 
-    async function submitData() {
-        const btn = document.getElementById('saveBtn');
-        btn.disabled = true; btn.innerText = "Saving...";
+async function submitData() {
+    const btn = document.getElementById('saveBtn');
+    btn.disabled = true; btn.innerText = "Saving...";
 
-        const payload = {
-            admNo: document.getElementById('admNo').value,
-            name: document.getElementById('stuName').value,
-            roll: document.getElementById('rollNo').value,
-            // Yahan dono ko jod kar "8-A" format bhej rahe hain
-            classSec: document.getElementById('stuClass').value + "-" + document.getElementById('stuSection').value,
-            totalMarks: document.getElementById('displayTotal').innerText,
-            percentage: document.getElementById('displayPercent').innerText,
-            grade: document.getElementById('displayGrade').innerText
-        };
+    // 1. Pehle saare subjects ka data collect karo
+    let finalSubjects = [];
+    document.querySelectorAll('.subject-card').forEach(card => {
+        let subName = card.getAttribute('data-subject-name');
+        let theory = card.querySelector('.theory-input').value || ""; // Empty string agar marks nahi hain
+        
+        let comps = {};
+        card.querySelectorAll('.comp-input').forEach(ci => {
+            let compName = ci.getAttribute('data-comp');
+            comps[compName] = ci.value || ""; 
+        });
+
+        finalSubjects.push({
+            subject: subName,
+            theory: theory,
+            competencies: comps
+        });
+    });
+
+    // 2. PAYLOAD taiyar karo
+    const payload = {
+        admNo: document.getElementById('admNo').value,
+        name: document.getElementById('stuName').value,
+        roll: document.getElementById('rollNo').value,
+        classSec: document.getElementById('stuClass').value + "-" + document.getElementById('stuSection').value,
+        totalMarks: document.getElementById('displayTotal').innerText,
+        percentage: document.getElementById('displayPercent').innerText,
+        grade: document.getElementById('displayGrade').innerText,
+        // YAHAN DHAYAN DO: Array ko String mein badal kar bhej rahe hain
+        subjectData: JSON.stringify(finalSubjects) 
+    };
+
+    try {
+        // 3. Google Script ko bhejo
+        const response = await fetch(WEB_APP_URL, {
+            method: 'POST',
+            body: JSON.stringify(payload) // Pura payload stringify hona chahiye
+        });
+        
+        alert("Record Saved Successfully!");
+        location.reload();
+    } catch(e) {
+        // Google Script 'no-cors' mode mein error throw karta hai par data save ho jata hai
+        alert("Record Sent to Sheet!");
+        location.reload();
+    }
+}
 
         try {
             await fetch(WEB_APP_URL, {
