@@ -26,13 +26,13 @@
         .table-report { width: 100%; border-collapse: collapse; margin-top: 20px; }
         .table-report th, .table-report td { border: 1.5px solid #2c3e50; padding: 12px; text-align: center; }
         .table-report th { background-color: #ecf0f1; color: #2c3e50; font-weight: bold; text-transform: uppercase; }
-        .sub-name { text-align: left !important; font-weight: bold; background: #fdfdfd; width: 20%; }
+        .sub-name { text-align: left !important; font-weight: bold; background: #fdfdfd; width: 40%; }
 
         .result-footer { background: #f8f9fa; border: 1px solid #ddd; padding: 20px; border-radius: 10px; margin-top: 30px; }
 
         @media print {
             .no-print { display: none !important; }
-            #reportContent { display: block !important; border: none; width: 100%; max-width: 100%; margin: 0; padding: 20px; }
+            #reportContent { display: block !important; border: none !important; width: 100%; max-width: 100%; margin: 0; padding: 20px; }
             body { background: white; }
         }
     </style>
@@ -52,7 +52,7 @@
         </div>
         <div id="loader" class="text-center mt-3" style="display:none;">
             <div class="spinner-border text-primary" role="status"></div>
-            <p>Fetching from Database...</p>
+            <p>Connecting to Server...</p>
         </div>
     </div>
 
@@ -76,8 +76,14 @@
 
         <div class="table-responsive">
             <table class="table-report">
-                <thead id="marksHead"></thead>
-                <tbody id="marksBody"></tbody>
+                <thead>
+                    <tr>
+                        <th class="sub-name">Subjects / Particulars</th>
+                        <th>Marks / Grades</th>
+                    </tr>
+                </thead>
+                <tbody id="marksBody">
+                    </tbody>
             </table>
         </div>
 
@@ -100,7 +106,7 @@
     </div>
 </div>
 
-<script>
+ <script>
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwPpYH6_BGZhIa0O3Cu8keJxArC0jYxwdgQ-0shIzBHjfznjIxP6b6YuhKoSzewwmtC1g/exec";
 
     function getReport() {
@@ -111,69 +117,81 @@
         document.getElementById('reportContent').style.display = 'none';
         document.getElementById('actionBtns').style.display = 'none';
 
-        // JSONP Logic: script add karke data mangwana
         const script = document.createElement('script');
+        // Action: getReport, ID: Admission Number
         script.src = `${WEB_APP_URL}?action=getReport&id=${encodeURIComponent(id)}&callback=handleResponse`;
         document.body.appendChild(script);
         document.body.removeChild(script);
     }
 
-    // Ye function Google Script se data aate hi chalega
     function handleResponse(data) {
         document.getElementById('loader').style.display = 'none';
         
         if(data && data.found) {
-            // Basic Details
-            document.getElementById('rSchoolName').innerText = data.schoolName;
-            document.getElementById('rSession').innerText = `SESSION: ${data.session}`;
-            document.getElementById('rName').innerText = data.name;
-            document.getElementById('rRoll').innerText = data.roll;
-            document.getElementById('rAdm').innerText = document.getElementById('admNoSearch').value;
-            document.getElementById('rClass').innerText = data.classSec;
-            document.getElementById('rTotal').innerText = data.total;
-            document.getElementById('rPercent').innerText = data.percent;
-            document.getElementById('rGrade').innerText = data.grade;
+            const d = data.details; // Sheet ki puri row ka object
 
-            let subjects = data.subjects;
-            if (typeof subjects === 'string') {
-                try { subjects = JSON.parse(subjects); } catch(e) { subjects = []; }
+            // 1. Basic Details (Tere portal ke sequence ke hisaab se)
+            // Note: Agar Sheet ke headers alag hain toh brackets [] mein wahi likhna jo Column Header hai
+            document.getElementById('rName').innerText = d["name"] || d["Name"] || "N/A";
+            document.getElementById('rRoll').innerText = d["roll"] || d["Roll"] || "N/A";
+            document.getElementById('rAdm').innerText = document.getElementById('admNoSearch').value;
+            document.getElementById('rClass').innerText = d["classSec"] || d["Class"] || "N/A";
+            
+            // Result Footer (Bottom section)
+            document.getElementById('rTotal').innerText = d["totalMarks"] || d["Total"] || "0";
+            document.getElementById('rPercent').innerText = (d["percentage"] || d["Percentage"] || "0") + "%";
+            document.getElementById('rGrade').innerText = d["grade"] || d["Grade"] || "-";
+
+            // 2. JSON Marks Logic (Column I wala data)
+            let subjects = [];
+            try {
+                // Column I ka header dhund raha hai (subjectData ya SubjectData)
+                let rawJson = d["subjectData"] || d["SubjectData"];
+                if (rawJson) {
+                    subjects = JSON.parse(rawJson);
+                }
+            } catch(e) {
+                console.error("JSON Parse Error:", e);
+                subjects = [];
             }
 
-            // Dynamic Column Logic
-            let validComps = new Set();
-            subjects.forEach(s => {
-                if(s.competencies) {
-                    Object.keys(s.competencies).forEach(k => {
-                        let val = s.competencies[k];
-                        if(val !== "" && val !== null && val !== undefined) validComps.add(k);
-                    });
-                }
-            });
-
-            const compList = Array.from(validComps);
-
-            // Table Header
-            let headHTML = `<tr><th class="sub-name">Subjects</th><th>Theory</th>`;
-            compList.forEach(c => headHTML += `<th>${c}</th>`);
-            headHTML += `</tr>`;
-            document.getElementById('marksHead').innerHTML = headHTML;
-
-            // Table Body
             let bodyHTML = "";
-            subjects.forEach(s => {
-                bodyHTML += `<tr><td class="sub-name">${s.subject}</td><td>${s.theory || '0'}</td>`;
-                compList.forEach(c => {
-                    let val = (s.competencies && s.competencies[c] !== "" && s.competencies[c] !== null) ? s.competencies[c] : '-';
-                    bodyHTML += `<td>${val}</td>`;
+            if(subjects.length > 0) {
+                subjects.forEach(s => {
+                    // Main Subject Row
+                    bodyHTML += `
+                        <tr style="background: #f8f9fa; border-top: 2px solid #dee2e6;">
+                            <td class="sub-name" style="font-size: 1.1em; color: #2c3e50;">${s.subject}</td>
+                            <td class="fw-bold" style="font-size: 1.1em;">${s.theory || '-'}</td>
+                        </tr>`;
+                    
+                    // Competencies (Knowledge, Understanding, Practical etc.)
+                    if(s.competencies) {
+                        for (let key in s.competencies) {
+                            let val = s.competencies[key];
+                            // Agar marks bhare hain tabhi row dikhao
+                            if(val !== "" && val !== null) {
+                                bodyHTML += `
+                                    <tr>
+                                        <td style="padding-left: 45px; font-size: 0.9em; color: #666; text-align: left;">
+                                            <span style="color: #0d6efd;">↳</span> ${key}
+                                        </td>
+                                        <td style="font-size: 0.9em; color: #333;">${val}</td>
+                                    </tr>`;
+                            }
+                        }
+                    }
                 });
-                bodyHTML += `</tr>`;
-            });
-            document.getElementById('marksBody').innerHTML = bodyHTML;
+            } else {
+                bodyHTML = "<tr><td colspan='2' class='text-danger'>No subject data found in Column I</td></tr>";
+            }
 
+            document.getElementById('marksBody').innerHTML = bodyHTML;
             document.getElementById('reportContent').style.display = 'block';
             document.getElementById('actionBtns').style.display = 'block';
+
         } else {
-            alert("Record Not Found!");
+            alert("Record Not Found! Please check Admission Number.");
         }
     }
 </script>
