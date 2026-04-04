@@ -1,122 +1,43 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Report Portal</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        :root { --primary-color: #2c3e50; }
-        body { background-color: #f4f7f6; font-family: 'Segoe UI', sans-serif; }
-        .header-section { background: var(--primary-color); color: white; padding: 25px; border-radius: 0 0 20px 20px; margin-bottom: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        .search-card { border: none; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); background: white; padding: 20px; }
-        #reportContent { background: white; padding: 40px; border: 2px solid #333; margin: 20px auto; max-width: 1050px; display: none; box-shadow: 0 0 20px rgba(0,0,0,0.1); }
-        .table-report { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        .table-report th, .table-report td { border: 1.5px solid #2c3e50; padding: 12px; text-align: center; }
-        .table-report th { background-color: #ecf0f1; font-weight: bold; }
-        .sub-name { text-align: left !important; font-weight: bold; background: #fdfdfd; width: 20%; }
-        @media print { .no-print { display: none !important; } #reportContent { display: block !important; border: none; width: 100%; margin: 0; padding: 20px; } }
-    </style>
-</head>
-<body>
-
-<div class="container mb-5">
-    <div class="header-section text-center no-print">
-        <h1>Student Report Portal</h1>
-        <p>Enter Admission Number to generate Report Card</p>
-    </div>
-
-    <div class="search-card no-print mb-4 mx-auto" style="max-width: 600px;">
-        <div class="input-group">
-            <input type="text" id="admNoSearch" class="form-control form-control-lg" placeholder="Admission Number...">
-            <button class="btn btn-primary btn-lg" onclick="getReport()">Search Report</button>
-        </div>
-        <div id="loader" class="text-center mt-3" style="display:none;">
-            <div class="spinner-border text-primary" role="status"></div>
-            <p>Connecting to Secure Database...</p>
-        </div>
-    </div>
-
-    <div id="reportContent">
-        <div class="report-header text-center mb-4">
-            <h1 id="rSchoolName" style="font-weight: 800;">SCHOOL NAME</h1>
-            <h5 id="rSession" class="text-muted">SESSION: 2024-25</h5>
-            <h3 class="mt-3" style="text-decoration: underline;">ANNUAL PERFORMANCE REPORT</h3>
-        </div>
-
-        <div class="row mb-4">
-            <div class="col-6">
-                <strong>NAME:</strong> <span id="rName">---</span><br>
-                <strong>ROLL NO:</strong> <span id="rRoll">---</span>
-            </div>
-            <div class="col-6 text-end">
-                <strong>ADM NO:</strong> <span id="rAdm">---</span><br>
-                <strong>CLASS:</strong> <span id="rClass">---</span>
-            </div>
-        </div>
-
-        <table class="table-report">
-            <thead id="marksHead"></thead>
-            <tbody id="marksBody"></tbody>
-        </table>
-
-        <div class="row mt-4 p-3 text-center" style="background: #f8f9fa; border: 1px solid #ddd; border-radius: 10px;">
-            <div class="col-4"><h5>TOTAL: <span id="rTotal">0</span></h5></div>
-            <div class="col-4"><h5>PERCENT: <span id="rPercent">0%</span></h5></div>
-            <div class="col-4"><h5>GRADE: <span id="rGrade">--</span></h5></div>
-        </div>
-
-        <div class="row mt-5 pt-4 text-center">
-            <div class="col-6"><p>________________<br>Teacher Signature</p></div>
-            <div class="col-6"><p>________________<br>Principal Signature</p></div>
-        </div>
-    </div>
-
-    <div id="actionBtns" class="text-center no-print mt-4" style="display:none;">
-        <button class="btn btn-dark btn-lg px-5" onclick="window.print()">Print / Save PDF</button>
-    </div>
-</div>
-
 <script>
-    // URL check kar lena ek baar
+    // Tera URL same rahega kyunki tune purane pe hi naya version dala hai
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwPpYH6_BGZhIa0O3Cu8keJxArC0jYxwdgQ-0shIzBHjfznjIxP6b6YuhKoSzewwmtC1g/exec";
 
     function getReport() {
         const id = document.getElementById('admNoSearch').value;
-        if(!id) return alert("Please enter ID");
+        if(!id) return alert("Please enter Admission Number");
 
         document.getElementById('loader').style.display = 'block';
         document.getElementById('reportContent').style.display = 'none';
+        document.getElementById('actionBtns').style.display = 'none';
 
-        // DATABASE ERROR FIX: JSONP Bypass (Sabse Powerfull method)
+        // DATABASE ERROR FIX: JSONP Bypass
         const script = document.createElement('script');
-        // Hum Google ko bol rahe hain ki humein data 'callback' function mein chahiye
+        // Hum callback=onSuccess bhej rahe hain
         script.src = `${WEB_APP_URL}?action=getReport&id=${encodeURIComponent(id)}&callback=onSuccess`;
         
         script.onerror = function() {
             document.getElementById('loader').style.display = 'none';
-            alert("Database Connection Failed! Check if Script is Deployed as 'Anyone'.");
+            alert("Connection Error! Check if Script is Deployed correctly.");
         };
-        
+
         document.body.appendChild(script);
-        // Clean up
-        document.body.removeChild(script);
+        document.body.removeChild(script); // Cleanup
     }
 
     // Ye function data aane par apne aap chalega
     function onSuccess(data) {
         document.getElementById('loader').style.display = 'none';
-        
         if(data && data.found) {
-            render(data);
+            renderReport(data);
         } else {
-            alert("Student Record Not Found!");
+            alert("Record Not Found! ID check karo.");
         }
     }
 
-    function render(data) {
-        document.getElementById('rSchoolName').innerText = data.schoolName || "SCHOOL NAME";
-        document.getElementById('rSession').innerText = `SESSION: ${data.session || "2024-25"}`;
+    function renderReport(data) {
+        // Basic Details
+        document.getElementById('rSchoolName').innerText = data.schoolName;
+        document.getElementById('rSession').innerText = `SESSION: ${data.session}`;
         document.getElementById('rName').innerText = data.name;
         document.getElementById('rRoll').innerText = data.roll;
         document.getElementById('rAdm').innerText = document.getElementById('admNoSearch').value;
@@ -130,40 +51,42 @@
             try { subjects = JSON.parse(subjects); } catch(e) { subjects = []; }
         }
 
-        // Logic: Filter Empty columns but show 0
-        let comps = new Set();
+        // Filter Logic: Khali column chhupao, 0 dikhao
+        let validComps = new Set();
         subjects.forEach(s => {
             if(s.competencies) {
                 Object.keys(s.competencies).forEach(k => {
                     let val = s.competencies[k];
-                    if(val !== "" && val !== null && val !== undefined) comps.add(k);
+                    if(val !== "" && val !== null && val !== undefined) {
+                        validComps.add(k);
+                    }
                 });
             }
         });
 
-        const compList = Array.from(comps);
+        const compList = Array.from(validComps);
 
-        // Build Header
-        let h = `<tr><th class="sub-name">Subjects</th><th>Theory</th>`;
-        compList.forEach(c => h += `<th>${c}</th>`);
-        h += `</tr>`;
-        document.getElementById('marksHead').innerHTML = h;
+        // Header Table (Horizontal)
+        let headHTML = `<tr><th class="sub-name">Subjects</th><th>Theory</th>`;
+        compList.forEach(c => headHTML += `<th>${c}</th>`);
+        headHTML += `</tr>`;
+        document.getElementById('marksHead').innerHTML = headHTML;
 
-        // Build Body
-        let b = "";
+        // Body Table
+        let bodyHTML = "";
         subjects.forEach(s => {
-            b += `<tr><td class="sub-name">${s.subject}</td><td>${s.theory || '0'}</td>`;
+            bodyHTML += `<tr><td class="sub-name">${s.subject}</td><td>${s.theory || '0'}</td>`;
             compList.forEach(c => {
-                let v = (s.competencies && s.competencies[c] !== "" && s.competencies[c] !== null) ? s.competencies[c] : '-';
-                b += `<td>${v}</td>`;
+                // Agar 0 hai toh dikhayega, agar blank hai toh '-' dikhayega
+                let val = (s.competencies && s.competencies[c] !== "" && s.competencies[c] !== null) ? s.competencies[c] : '-';
+                bodyHTML += `<td>${val}</td>`;
             });
-            b += `</tr>`;
+            bodyHTML += `</tr>`;
         });
-        document.getElementById('marksBody').innerHTML = b;
+        document.getElementById('marksBody').innerHTML = bodyHTML;
 
+        // Display Report
         document.getElementById('reportContent').style.display = 'block';
         document.getElementById('actionBtns').style.display = 'block';
     }
 </script>
-</body>
-</html>
