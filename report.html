@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Progress Report</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: #f4f7f6; font-family: 'Segoe UI', Tahoma, sans-serif; padding: 20px; }
+        
+        /* Marksheet Container */
+        .report-card {
+            background: white;
+            max-width: 1050px;
+            margin: auto;
+            border: 2px solid #000;
+            padding: 25px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+
+        /* Header Section */
+        .report-header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px; }
+        .report-header h1 { font-weight: 900; text-decoration: underline; margin-bottom: 5px; text-transform: uppercase; }
+        
+        /* Student Info Table */
+        .info-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        .info-table td { border: 1px solid #000; padding: 8px; font-size: 14px; }
+        .label-bg { font-weight: bold; background: #ececec; width: 20%; }
+
+        /* Horizontal Subject Grid */
+        .subject-grid { 
+            display: flex; 
+            flex-wrap: wrap; 
+            gap: 15px; 
+            justify-content: flex-start; 
+            margin-bottom: 25px;
+        }
+        .subject-box { 
+            border: 1px solid #000; 
+            width: calc(33.33% - 10px); /* Ek row mein 3 subjects */
+            min-width: 300px;
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+        }
+        .sub-title { 
+            background: #f8f9fa; 
+            border-bottom: 1px solid #000; 
+            padding: 6px; 
+            font-weight: bold; 
+            text-align: center;
+            font-size: 15px;
+        }
+        .comp-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .comp-table td { border-bottom: 1px solid #000; padding: 5px 10px; }
+        .comp-table tr:last-child td { border-bottom: none; }
+
+        /* Summary Table */
+        .summary-table { width: 100%; border-collapse: collapse; text-align: center; margin-top: 10px; }
+        .summary-table td { border: 1px solid #000; padding: 10px; font-weight: bold; }
+
+        /* Signature Section (As per your Screenshot) */
+        .signature-row { 
+            display: flex; 
+            margin-top: 30px; 
+            border: 1px solid #000;
+        }
+        .sig-item { 
+            flex: 1; 
+            border-right: 1px solid #000; 
+            padding: 45px 10px 10px 10px; 
+            text-align: center; 
+            font-size: 13px; 
+            font-weight: bold;
+            text-transform: capitalize;
+        }
+        .sig-item:last-child { border-right: none; }
+
+        @media print {
+            .no-print { display: none; }
+            body { background: white; padding: 0; }
+            .report-card { border: 2px solid #000; box-shadow: none; width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container no-print mb-5 text-center">
+    <div class="card p-4 shadow-sm" style="max-width: 500px; margin: auto;">
+        <h5 class="mb-3">View Report Card</h5>
+        <div class="input-group">
+            <input type="text" id="admInput" class="form-control" placeholder="Enter Admission No.">
+            <button class="btn btn-primary" onclick="generateReport()">Search</button>
+        </div>
+    </div>
+</div>
+
+<div id="reportContent" class="report-card" style="display:none;">
+    
+    <div class="report-header">
+        <h1 id="dispScl">SCHOOL NAME</h1>
+        <p class="mb-1"><strong>Session:</strong> <span id="dispSession">---</span></p>
+        <p class="mb-0"><strong>Admission No.</strong><br><span id="dispAdm" class="fw-bold">---</span></p>
+    </div>
+
+    <table class="info-table">
+        <tr>
+            <td class="label-bg">Name of Student</td><td id="dispName" style="width:30%"></td>
+            <td class="label-bg">Roll No:</td><td id="dispRoll"></td>
+        </tr>
+        <tr>
+            <td class="label-bg">Class</td><td id="dispClass"></td>
+            <td class="label-bg">Sec:</td><td id="dispSec"></td>
+        </tr>
+    </table>
+
+    <div id="subjectGrid" class="subject-grid">
+        </div>
+
+    <table class="summary-table">
+        <tr>
+            <td bgcolor="#f2f2f2">Marks Obtain:</td><td id="dispObt"></td>
+            <td bgcolor="#f2f2f2">Percentage:</td><td id="dispPer"></td>
+            <td bgcolor="#f2f2f2">Days Present:</td><td>-</td>
+        </tr>
+        <tr>
+            <td bgcolor="#f2f2f2">Total Marks:</td><td id="dispMax"></td>
+            <td bgcolor="#f2f2f2">Grade:</td><td id="dispGrade"></td>
+            <td bgcolor="#f2f2f2">Total Days:</td><td>-</td>
+        </tr>
+    </table>
+
+    <div class="signature-row">
+        <div class="sig-item">class teacher sign</div>
+        <div class="sig-item">checker's sign</div>
+        <div class="sig-item">parents sign</div>
+        <div class="sig-item">principal sign</div>
+    </div>
+
+    <div class="text-center mt-5 no-print">
+        <button class="btn btn-success btn-lg px-5" onclick="window.print()">Print Report Card</button>
+    </div>
+</div>
+
+<script>
+    // APNI NEW WEB APP URL YAHAN DALO
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwPpYH6_BGZhIa0O3Cu8keJxArC0jYxwdgQ-0shIzBHjfznjIxP6b6YuhKoSzewwmtC1g/exec"; 
+
+    async function generateReport() {
+        const id = document.getElementById('admInput').value;
+        if(!id) return alert("Please enter Admission Number!");
+
+        const btn = document.querySelector('.no-print button');
+        btn.innerText = "Generating...";
+        btn.disabled = true;
+
+        try {
+            const response = await fetch(`${WEB_APP_URL}?action=getReport&id=${id}`);
+            const data = await response.json();
+
+            if(data.found) {
+                document.getElementById('reportContent').style.display = 'block';
+                
+                // Header Details
+                document.getElementById('dispScl').innerText = data.schoolName;
+                document.getElementById('dispSession').innerText = data.session;
+                document.getElementById('dispAdm').innerText = id;
+                document.getElementById('dispName').innerText = data.name;
+                document.getElementById('dispRoll').innerText = data.roll;
+                
+                // Class & Sec Split
+                let clsParts = data.classSec.split('-');
+                document.getElementById('dispClass').innerText = clsParts[0] || data.classSec;
+                document.getElementById('dispSec').innerText = clsParts[1] || "";
+
+                // Summary Calculation
+                let marksParts = data.total.split('/');
+                document.getElementById('dispObt').innerText = marksParts[0] || "0";
+                document.getElementById('dispMax').innerText = marksParts[1] || "0";
+                document.getElementById('dispPer').innerText = data.percent;
+                document.getElementById('dispGrade').innerText = data.grade;
+
+                // SUBJECT GRID GENERATION
+                const grid = document.getElementById('subjectGrid');
+                grid.innerHTML = ""; 
+
+                data.subjects.forEach(sub => {
+                    let subBox = document.createElement('div');
+                    subBox.className = 'subject-box';
+                    
+                    let tMark = Number(sub.theory || 0);
+                    let compRows = "";
+                    let subTotal = tMark;
+
+                    // Handling the Competencies Object
+                    if (sub.competencies && typeof sub.competencies === 'object') {
+                        Object.entries(sub.competencies).forEach(([name, mark]) => {
+                            subTotal += Number(mark || 0);
+                            compRows += `
+                                <tr>
+                                    <td style="width:70%; text-transform:capitalize;">${name}</td>
+                                    <td style="text-align:center; font-weight:bold; border-left:1px solid #000;">${mark}</td>
+                                </tr>`;
+                        });
+                    }
+
+                    subBox.innerHTML = `
+                        <div class="sub-title">${sub.subject} : ${subTotal}</div>
+                        <div style="font-size:10px; text-align:center; background:#000; color:#fff; border-bottom:1px solid #000;">COMPETENCIES</div>
+                        <table class="comp-table">
+                            <tr style="background:#fff">
+                                <td style="width:70%">Theory Marks</td>
+                                <td style="text-align:center; font-weight:bold; border-left:1px solid #000;">${tMark}</td>
+                            </tr>
+                            ${compRows}
+                        </table>
+                    `;
+                    grid.appendChild(subBox);
+                });
+
+                // Scroll down to the report
+                window.scrollTo({ top: document.getElementById('reportContent').offsetTop - 20, behavior: 'smooth' });
+
+            } else {
+                alert("No record found! Please check the Admission Number.");
+            }
+        } catch(e) {
+            console.error(e);
+            alert("Error: Web App connection failed.");
+        } finally {
+            btn.innerText = "Search";
+            btn.disabled = false;
+        }
+    }
+</script>
+</body>
+</html>
