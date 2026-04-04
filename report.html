@@ -9,15 +9,13 @@
         :root { --primary-color: #2c3e50; }
         body { background-color: #f4f7f6; font-family: 'Segoe UI', sans-serif; }
         .header-section { background: var(--primary-color); color: white; padding: 25px; border-radius: 0 0 20px 20px; margin-bottom: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        .search-card { border: none; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        .search-card { border: none; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); background: white; padding: 20px; }
         #reportContent { background: white; padding: 40px; border: 2px solid #333; margin: 20px auto; max-width: 1050px; display: none; box-shadow: 0 0 20px rgba(0,0,0,0.1); }
-        .report-header { border-bottom: 4px double #2c3e50; margin-bottom: 25px; padding-bottom: 15px; }
         .table-report { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        .table-report th, .table-report td { border: 1.5px solid #2c3e50; padding: 12px; text-align: center; vertical-align: middle; }
-        .table-report th { background-color: #ecf0f1; color: #2c3e50; font-weight: bold; text-transform: uppercase; }
+        .table-report th, .table-report td { border: 1.5px solid #2c3e50; padding: 12px; text-align: center; }
+        .table-report th { background-color: #ecf0f1; font-weight: bold; }
         .sub-name { text-align: left !important; font-weight: bold; background: #fdfdfd; width: 20%; }
-        .result-footer { background: #f8f9fa; border: 1px solid #ddd; padding: 20px; border-radius: 10px; margin-top: 30px; }
-        @media print { .no-print, .btn, .search-card, .header-section { display: none !important; } #reportContent { display: block !important; border: none; width: 100%; margin: 0; padding: 20px; } body { background: white; } }
+        @media print { .no-print { display: none !important; } #reportContent { display: block !important; border: none; width: 100%; margin: 0; padding: 20px; } }
     </style>
 </head>
 <body>
@@ -28,107 +26,100 @@
         <p>Enter Admission Number to generate Report Card</p>
     </div>
 
-    <div class="card search-card p-4 no-print mb-4">
-        <div class="row justify-content-center">
-            <div class="col-md-6 text-center">
-                <div class="input-group">
-                    <input type="text" id="admNoSearch" class="form-control form-control-lg" placeholder="Admission Number...">
-                    <button class="btn btn-primary btn-lg" onclick="getReport()">Search Report</button>
-                </div>
-                <div id="loader" class="mt-3" style="display:none;">
-                    <div class="spinner-border text-primary" role="status"></div>
-                    <p>Fetching Data...</p>
-                </div>
-            </div>
+    <div class="search-card no-print mb-4 mx-auto" style="max-width: 600px;">
+        <div class="input-group">
+            <input type="text" id="admNoSearch" class="form-control form-control-lg" placeholder="Admission Number...">
+            <button class="btn btn-primary btn-lg" onclick="getReport()">Search Report</button>
+        </div>
+        <div id="loader" class="text-center mt-3" style="display:none;">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p>Connecting to Secure Database...</p>
         </div>
     </div>
 
     <div id="reportContent">
-        <div class="report-header text-center">
-            <h1 id="rSchoolName" style="font-weight: 800; color: #2c3e50;">SCHOOL NAME</h1>
+        <div class="report-header text-center mb-4">
+            <h1 id="rSchoolName" style="font-weight: 800;">SCHOOL NAME</h1>
             <h5 id="rSession" class="text-muted">SESSION: 2024-25</h5>
             <h3 class="mt-3" style="text-decoration: underline;">ANNUAL PERFORMANCE REPORT</h3>
         </div>
 
-        <div class="row student-meta mb-4">
+        <div class="row mb-4">
             <div class="col-6">
                 <strong>NAME:</strong> <span id="rName">---</span><br>
                 <strong>ROLL NO:</strong> <span id="rRoll">---</span>
             </div>
             <div class="col-6 text-end">
                 <strong>ADM NO:</strong> <span id="rAdm">---</span><br>
-                <strong>CLASS & SEC:</strong> <span id="rClass">---</span>
+                <strong>CLASS:</strong> <span id="rClass">---</span>
             </div>
         </div>
 
-        <div class="table-responsive">
-            <table class="table-report">
-                <thead id="marksHead"></thead>
-                <tbody id="marksBody"></tbody>
-            </table>
-        </div>
+        <table class="table-report">
+            <thead id="marksHead"></thead>
+            <tbody id="marksBody"></tbody>
+        </table>
 
-        <div class="result-footer mt-4">
-            <div class="row text-center">
-                <div class="col-4"><h5>TOTAL: <span id="rTotal" class="text-primary">0</span></h5></div>
-                <div class="col-4"><h5>PERCENTAGE: <span id="rPercent" class="text-primary">0%</span></h5></div>
-                <div class="col-4"><h5>GRADE: <span id="rGrade" class="badge bg-success">--</span></h5></div>
-            </div>
+        <div class="row mt-4 p-3 text-center" style="background: #f8f9fa; border: 1px solid #ddd; border-radius: 10px;">
+            <div class="col-4"><h5>TOTAL: <span id="rTotal">0</span></h5></div>
+            <div class="col-4"><h5>PERCENT: <span id="rPercent">0%</span></h5></div>
+            <div class="col-4"><h5>GRADE: <span id="rGrade">--</span></h5></div>
         </div>
 
         <div class="row mt-5 pt-4 text-center">
-            <div class="col-6"><p>__________________________<br><strong>CLASS TEACHER</strong></p></div>
-            <div class="col-6"><p>__________________________<br><strong>PRINCIPAL</strong></p></div>
+            <div class="col-6"><p>________________<br>Teacher Signature</p></div>
+            <div class="col-6"><p>________________<br>Principal Signature</p></div>
         </div>
     </div>
 
     <div id="actionBtns" class="text-center no-print mt-4" style="display:none;">
-        <button class="btn btn-dark btn-lg px-5 me-2" onclick="window.print()">Preview & Print</button>
-        <button class="btn btn-outline-primary btn-lg px-5" onclick="window.print()">Save Report</button>
+        <button class="btn btn-dark btn-lg px-5" onclick="window.print()">Print / Save PDF</button>
     </div>
 </div>
 
 <script>
-    // URL CHANGE MAT KARNA, YAHI RAHNE DENA
+    // URL check kar lena ek baar
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwPpYH6_BGZhIa0O3Cu8keJxArC0jYxwdgQ-0shIzBHjfznjIxP6b6YuhKoSzewwmtC1g/exec";
 
-    async function getReport() {
+    function getReport() {
         const id = document.getElementById('admNoSearch').value;
-        if(!id) return alert("Enter Admission No.");
+        if(!id) return alert("Please enter ID");
 
         document.getElementById('loader').style.display = 'block';
         document.getElementById('reportContent').style.display = 'none';
-        document.getElementById('actionBtns').style.display = 'none';
 
-        try {
-            // FIX: redirect "follow" karna zaroori hai Apps Script ke liye
-            const response = await fetch(`${WEB_APP_URL}?action=getReport&id=${id}`, {
-                method: "GET",
-                mode: "cors",
-                redirect: "follow"
-            });
-            
-            const data = await response.json();
-
-            if(data && data.found) {
-                renderReport(data, id);
-            } else {
-                alert("No record found!");
-            }
-        } catch(e) {
-            console.error(e);
-            alert("Database Error! Check if your Script is Deployed as 'Anyone'.");
-        } finally {
+        // DATABASE ERROR FIX: JSONP Bypass (Sabse Powerfull method)
+        const script = document.createElement('script');
+        // Hum Google ko bol rahe hain ki humein data 'callback' function mein chahiye
+        script.src = `${WEB_APP_URL}?action=getReport&id=${encodeURIComponent(id)}&callback=onSuccess`;
+        
+        script.onerror = function() {
             document.getElementById('loader').style.display = 'none';
+            alert("Database Connection Failed! Check if Script is Deployed as 'Anyone'.");
+        };
+        
+        document.body.appendChild(script);
+        // Clean up
+        document.body.removeChild(script);
+    }
+
+    // Ye function data aane par apne aap chalega
+    function onSuccess(data) {
+        document.getElementById('loader').style.display = 'none';
+        
+        if(data && data.found) {
+            render(data);
+        } else {
+            alert("Student Record Not Found!");
         }
     }
 
-    function renderReport(data, id) {
-        document.getElementById('rSchoolName').innerText = data.schoolName;
-        document.getElementById('rSession').innerText = `SESSION: ${data.session}`;
+    function render(data) {
+        document.getElementById('rSchoolName').innerText = data.schoolName || "SCHOOL NAME";
+        document.getElementById('rSession').innerText = `SESSION: ${data.session || "2024-25"}`;
         document.getElementById('rName').innerText = data.name;
         document.getElementById('rRoll').innerText = data.roll;
-        document.getElementById('rAdm').innerText = id;
+        document.getElementById('rAdm').innerText = document.getElementById('admNoSearch').value;
         document.getElementById('rClass').innerText = data.classSec;
         document.getElementById('rTotal').innerText = data.total;
         document.getElementById('rPercent').innerText = data.percent;
@@ -139,39 +130,36 @@
             try { subjects = JSON.parse(subjects); } catch(e) { subjects = []; }
         }
 
-        // Logic: Sirf wahi columns dikhao jo Empty nahi hain
-        let validComps = new Set();
+        // Logic: Filter Empty columns but show 0
+        let comps = new Set();
         subjects.forEach(s => {
             if(s.competencies) {
                 Object.keys(s.competencies).forEach(k => {
                     let val = s.competencies[k];
-                    // Agar value empty string ("") hai ya null hai toh mat dikhao, 0 hai toh dikhao
-                    if(val !== "" && val !== null && val !== undefined) {
-                        validComps.add(k);
-                    }
+                    if(val !== "" && val !== null && val !== undefined) comps.add(k);
                 });
             }
         });
 
-        const compList = Array.from(validComps);
+        const compList = Array.from(comps);
 
-        // Header
-        let headHTML = `<tr><th class="sub-name">Subjects</th><th>Theory</th>`;
-        compList.forEach(c => headHTML += `<th>${c}</th>`);
-        headHTML += `</tr>`;
-        document.getElementById('marksHead').innerHTML = headHTML;
+        // Build Header
+        let h = `<tr><th class="sub-name">Subjects</th><th>Theory</th>`;
+        compList.forEach(c => h += `<th>${c}</th>`);
+        h += `</tr>`;
+        document.getElementById('marksHead').innerHTML = h;
 
-        // Body
-        let bodyHTML = "";
+        // Build Body
+        let b = "";
         subjects.forEach(s => {
-            bodyHTML += `<tr><td class="sub-name">${s.subject}</td><td>${s.theory || '0'}</td>`;
+            b += `<tr><td class="sub-name">${s.subject}</td><td>${s.theory || '0'}</td>`;
             compList.forEach(c => {
-                let val = (s.competencies && s.competencies[c] !== "" && s.competencies[c] !== null) ? s.competencies[c] : '-';
-                bodyHTML += `<td>${val}</td>`;
+                let v = (s.competencies && s.competencies[c] !== "" && s.competencies[c] !== null) ? s.competencies[c] : '-';
+                b += `<td>${v}</td>`;
             });
-            bodyHTML += `</tr>`;
+            b += `</tr>`;
         });
-        document.getElementById('marksBody').innerHTML = bodyHTML;
+        document.getElementById('marksBody').innerHTML = b;
 
         document.getElementById('reportContent').style.display = 'block';
         document.getElementById('actionBtns').style.display = 'block';
